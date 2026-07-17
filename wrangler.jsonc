@@ -1,0 +1,37 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": ".open-next/worker.js",
+	// Worker name = the subdomain on *.workers.dev until a custom domain is set
+	// (custom domain wiring is a Phase 7 task).
+	"name": "knowledge-garden",
+	"compatibility_date": "2026-07-15",
+	"compatibility_flags": [
+		// Required for postgres.js TCP connections + Node APIs on Workers.
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"services": [
+		{
+			// Self-reference service binding, the service name must match the worker name
+			// see https://opennext.js.org/cloudflare/caching
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "knowledge-garden"
+		}
+	],
+	"images": {
+		// Enable image optimization
+		// see https://opennext.js.org/cloudflare/howtos/image
+		"binding": "IMAGES"
+	},
+	// Non-secret values are declared here; secrets (SUPABASE_SERVICE_ROLE_KEY,
+	// DATABASE_URL) are set via `wrangler secret put <NAME>` and are NOT listed.
+	// See .env.example for the full list and README "Getting started".
+	"vars": {
+		"NEXT_PUBLIC_SUPABASE_URL": "",
+		"NEXT_PUBLIC_SUPABASE_ANON_KEY": ""
+	}
+}

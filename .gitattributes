@@ -1,0 +1,16 @@
+# Normalize line endings to LF in the repo, checkout as-is locally.
+# Keeps diffs clean across Windows/macOS/Linux contributors.
+* text=auto eol=lf
+
+# Ensure shell scripts always use LF (CRLF breaks them on Unix).
+*.sh text eol=lf
+
+# Binary files — never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
