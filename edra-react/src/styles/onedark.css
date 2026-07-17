@@ -1,0 +1,151 @@
+.tiptap pre code {
+  color: #383a42;
+}
+
+.hljs-comment,
+.hljs-quote {
+  font-style: italic;
+  color: #a0a1a7;
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+  color: #e45649;
+}
+
+.hljs-number,
+.hljs-built_in,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+  color: #986801;
+}
+
+.hljs-attribute {
+  color: #c18401;
+}
+
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+  color: #50a14f;
+}
+
+.hljs-title,
+.hljs-section {
+  color: #4078f2;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+  color: #a626a4;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+  color: #0184bc;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
+
+.hljs-doctag,
+.hljs-formula {
+  color: #a626a4;
+}
+
+.hljs-attr,
+.hljs-subst {
+  color: #383a42;
+}
+
+.hljs-addition {
+  background-color: #e6ffed;
+}
+
+.hljs-deletion {
+  background-color: #ffeef0;
+}
+
+html.dark .tiptap pre code {
+  color: #abb2bf;
+}
+
+html.dark .hljs-comment,
+html.dark .hljs-quote {
+  color: #5c6370;
+}
+
+html.dark .hljs-variable,
+html.dark .hljs-template-variable,
+html.dark .hljs-tag,
+html.dark .hljs-name,
+html.dark .hljs-selector-id,
+html.dark .hljs-selector-class,
+html.dark .hljs-regexp,
+html.dark .hljs-deletion {
+  color: #e06c75;
+}
+
+html.dark .hljs-number,
+html.dark .hljs-built_in,
+html.dark .hljs-literal,
+html.dark .hljs-type,
+html.dark .hljs-params,
+html.dark .hljs-meta,
+html.dark .hljs-link {
+  color: #d19a66;
+}
+
+html.dark .hljs-attribute {
+  color: #e5c07b;
+}
+
+html.dark .hljs-string,
+html.dark .hljs-symbol,
+html.dark .hljs-bullet,
+html.dark .hljs-addition {
+  color: #98c379;
+}
+
+html.dark .hljs-title,
+html.dark .hljs-section {
+  color: #61afef;
+}
+
+html.dark .hljs-keyword,
+html.dark .hljs-selector-tag {
+  color: #c678dd;
+}
+
+html.dark .hljs-emphasis {
+  color: #56b6c2;
+}
+
+html.dark .hljs-doctag,
+html.dark .hljs-formula {
+  color: #c678dd;
+}
+
+html.dark .hljs-attr,
+html.dark .hljs-subst {
+  color: #abb2bf;
+}
+
+html.dark .hljs-addition {
+  background-color: #283428;
+}
+
+html.dark .hljs-deletion {
+  background-color: #342828;
+}
