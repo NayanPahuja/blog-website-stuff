@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { db, schema } from "@/db/client";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import Link from "next/link";
+import { ContentListItem } from "@/components/content/content-list-item";
 
 export const metadata: Metadata = {
   title: "Blogs — pkg/nayan",
@@ -10,7 +10,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function BlogsPage() {
-  let blogs: Array<{ id: string; title: string | null; slug: string | null; publishedAt: Date | null }> = [];
+  let blogs: Array<{
+    id: string;
+    title: string | null;
+    slug: string | null;
+    publishedAt: Date | null;
+    readingTime: number | null;
+  }> = [];
 
   try {
     blogs = await db
@@ -19,8 +25,10 @@ export default async function BlogsPage() {
         title: schema.contents.title,
         slug: schema.contents.slug,
         publishedAt: schema.contents.publishedAt,
+        readingTime: schema.blogDetails.readingTime,
       })
       .from(schema.contents)
+      .innerJoin(schema.blogDetails, eq(schema.blogDetails.contentId, schema.contents.id))
       .where(and(eq(schema.contents.contentType, "blog"), eq(schema.contents.isPublished, true)))
       .orderBy(desc(schema.contents.publishedAt));
   } catch {}
@@ -54,33 +62,15 @@ export default async function BlogsPage() {
       )}
       <div className="post-list">
         {blogs.map((blog) => (
-          <article key={blog.id} className="post">
-            <div className="post-meta-line">
-              <time className="date" dateTime={blog.publishedAt?.toISOString() ?? ""}>
-                {blog.publishedAt
-                  ? new Date(blog.publishedAt).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  : "Draft"}
-              </time>
-            </div>
-            <Link href={`/blogs/${blog.slug}`}>{blog.title}</Link>
-            {tagsByBlog[blog.id]?.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {tagsByBlog[blog.id].map((tag) => (
-                  <Link
-                    key={tag.slug}
-                    href={`/tags/${tag.slug}`}
-                    className="inline-block rounded px-2 py-0.5 text-xs font-medium text-[var(--faint)] hover:text-[var(--link)] transition-colors"
-                  >
-                    #{tag.name}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </article>
+          <ContentListItem
+            key={blog.id}
+            href={`/blogs/${blog.slug}`}
+            title={blog.title ?? "Untitled"}
+            date={blog.publishedAt}
+            dateFallback="Draft"
+            meta={blog.readingTime ? [`${blog.readingTime} min read`] : undefined}
+            tags={tagsByBlog[blog.id]}
+          />
         ))}
       </div>
     </div>
