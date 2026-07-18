@@ -70,7 +70,38 @@ const extensionName = 'slashCommand'
 
 export interface SlashCommandPopupProps {
   items: { name: string; title: string; commands: EdraCommand[] }[]
+  selectedGroupIdx: number
+  selectedCommandIdx: number
+  onHover: (groupIdx: number, commandIdx: number) => void
   command: (item: EdraCommand) => void
+}
+
+type FilteredGroup = { name: string; title: string; commands: EdraCommand[] }
+
+function flattenItems(items: FilteredGroup[]): EdraCommand[] {
+  return items.flatMap((g) => g.commands)
+}
+
+function clampMove(
+  items: FilteredGroup[],
+  groupIdx: number,
+  commandIdx: number,
+  delta: 1 | -1
+): [number, number] {
+  const flat = flattenItems(items)
+  const current = items[groupIdx]?.commands[commandIdx]
+  const currentFlatIdx = flat.indexOf(current as EdraCommand)
+  const nextFlatIdx = currentFlatIdx + delta
+  if (nextFlatIdx < 0 || nextFlatIdx >= flat.length) return [groupIdx, commandIdx]
+
+  let count = 0
+  for (let gi = 0; gi < items.length; gi++) {
+    for (let ci = 0; ci < items[gi].commands.length; ci++) {
+      if (count === nextFlatIdx) return [gi, ci]
+      count++
+    }
+  }
+  return [groupIdx, commandIdx]
 }
 
 export default (MenuList: ComponentType<SlashCommandPopupProps>): Extension =>
@@ -84,6 +115,9 @@ export default (MenuList: ComponentType<SlashCommandPopupProps>): Extension =>
         popupElement: null as HTMLElement | null,
         popupCleanup: null as (() => void) | null,
         root: null as Root | null,
+        currentItems: [] as FilteredGroup[],
+        selectedGroupIdx: 0,
+        selectedCommandIdx: 0,
       }
     },
 
@@ -113,6 +147,7 @@ export default (MenuList: ComponentType<SlashCommandPopupProps>): Extension =>
 
     addProseMirrorPlugins() {
       const storage = this.storage
+      const editor = this.editor
 
       return [
         Suggestion({
@@ -144,6 +179,7 @@ export default (MenuList: ComponentType<SlashCommandPopupProps>): Extension =>
           render: () => {
             let currentClientRect: (() => DOMRect | null) | null = null
             let contextElement: Element | null = null
+            let currentRange: { from: number; to: number } | null = null
 
             const updatePosition = () => {
               if (!storage.popupElement || !currentClientRect) return
@@ -167,18 +203,51 @@ export default (MenuList: ComponentType<SlashCommandPopupProps>): Extension =>
               })
             }
 
+            const runCommand = (item: EdraCommand) => {
+              if (!currentRange) return
+              editor.chain().focus().deleteRange(currentRange as any).run()
+              item.onClick?.(editor)
+
+              // view.focus() is a no-op when the contentEditable root already has DOM
+              // focus, so it never resyncs the browser caret into a React node view
+              // that just mounted (e.g. code block). A genuine blur+focus cycle forces
+              // ProseMirror to recompute and apply the DOM selection once the node
+              // view has had a frame to mount.
+              requestAnimationFrame(() => {
+                const view = editor.view
+                view.dom.blur()
+                view.focus()
+              })
+            }
+
+            const renderPopup = () => {
+              if (!storage.popupElement || !storage.root) return
+              storage.root.render(
+                <MenuList
+                  items={storage.currentItems}
+                  selectedGroupIdx={storage.selectedGroupIdx}
+                  selectedCommandIdx={storage.selectedCommandIdx}
+                  onHover={(gi: number, ci: number) => {
+                    storage.selectedGroupIdx = gi
+                    storage.selectedCommandIdx = ci
+                    renderPopup()
+                  }}
+                  command={runCommand}
+                />
+              )
+            }
+
             return {
               onStart: (props: SuggestionProps) => {
                 currentClientRect = props.clientRect ?? null
                 contextElement = props.editor.view.dom
+                currentRange = props.range as any
+                storage.currentItems = props.items as any
+                storage.selectedGroupIdx = 0
+                storage.selectedCommandIdx = 0
 
                 if (storage.popupElement && storage.root) {
-                  storage.root.render(
-                    <MenuList items={props.items as any} command={(item: any) => {
-                      props.editor.chain().focus().deleteRange(props.range as any).run()
-                      ;(item as EdraCommand).onClick?.(props.editor)
-                    }} />
-                  )
+                  renderPopup()
                   storage.popupElement.style.visibility = 'visible'
                   storage.popupElement.style.pointerEvents = 'auto'
                   updatePosition()
@@ -199,14 +268,13 @@ export default (MenuList: ComponentType<SlashCommandPopupProps>): Extension =>
               onUpdate(props: SuggestionProps) {
                 currentClientRect = props.clientRect ?? null
                 contextElement = props.editor.view.dom
+                currentRange = props.range as any
+                storage.currentItems = props.items as any
+                storage.selectedGroupIdx = 0
+                storage.selectedCommandIdx = 0
 
                 if (storage.popupElement && storage.root) {
-                  storage.root.render(
-                    <MenuList items={props.items as any} command={(item: any) => {
-                      props.editor.chain().focus().deleteRange(props.range as any).run()
-                      ;(item as EdraCommand).onClick?.(props.editor)
-                    }} />
-                  )
+                  renderPopup()
                   storage.popupElement.style.visibility = 'visible'
                   storage.popupElement.style.pointerEvents = 'auto'
                 }
@@ -227,7 +295,47 @@ export default (MenuList: ComponentType<SlashCommandPopupProps>): Extension =>
                   }
                   return true
                 }
-                return false
+
+                const items: FilteredGroup[] = storage.currentItems ?? []
+                if (items.length === 0) return false
+
+                switch (props.event.key) {
+                  case 'ArrowDown':
+                  case 'Tab': {
+                    props.event.preventDefault()
+                    const [gi, ci] = clampMove(
+                      items,
+                      storage.selectedGroupIdx,
+                      storage.selectedCommandIdx,
+                      props.event.shiftKey ? -1 : 1
+                    )
+                    storage.selectedGroupIdx = gi
+                    storage.selectedCommandIdx = ci
+                    renderPopup()
+                    return true
+                  }
+                  case 'ArrowUp': {
+                    props.event.preventDefault()
+                    const [gi, ci] = clampMove(
+                      items,
+                      storage.selectedGroupIdx,
+                      storage.selectedCommandIdx,
+                      -1
+                    )
+                    storage.selectedGroupIdx = gi
+                    storage.selectedCommandIdx = ci
+                    renderPopup()
+                    return true
+                  }
+                  case 'Enter': {
+                    props.event.preventDefault()
+                    const cmd = items[storage.selectedGroupIdx]?.commands[storage.selectedCommandIdx]
+                    if (cmd) runCommand(cmd)
+                    return true
+                  }
+                  default:
+                    return false
+                }
               },
 
               onExit() {
@@ -241,6 +349,7 @@ export default (MenuList: ComponentType<SlashCommandPopupProps>): Extension =>
                 }
                 currentClientRect = null
                 contextElement = null
+                currentRange = null
               },
             }
           },

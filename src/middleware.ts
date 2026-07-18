@@ -4,8 +4,6 @@ import { NextResponse, type NextRequest } from "next/server";
 const PUBLIC_ADMIN_PATHS = ["/admin/login"];
 const PUBLIC_API_PATHS = ["/api/admin/login", "/api/analytics/track"];
 
-export const runtime = "experimental-edge";
-
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
   const { pathname } = request.nextUrl;

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type { EdraCommand } from '../commands'
 
 interface FilteredGroup {
@@ -11,20 +11,20 @@ interface FilteredGroup {
 
 interface SlashCommandPopupProps {
   items: FilteredGroup[]
+  selectedGroupIdx: number
+  selectedCommandIdx: number
+  onHover: (groupIdx: number, commandIdx: number) => void
   command: (item: EdraCommand) => void
 }
 
-export function SlashCommandPopup({ items, command }: SlashCommandPopupProps) {
-  const [selectedGroupIdx, setSelectedGroupIdx] = useState(0)
-  const [selectedCommandIdx, setSelectedCommandIdx] = useState(0)
+export function SlashCommandPopup({
+  items,
+  selectedGroupIdx,
+  selectedCommandIdx,
+  onHover,
+  command,
+}: SlashCommandPopupProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-
-  const flatCommands = items.flatMap((g) => g.commands)
-
-  useEffect(() => {
-    setSelectedGroupIdx(0)
-    setSelectedCommandIdx(0)
-  }, [items])
 
   useEffect(() => {
     if (containerRef.current) {
@@ -32,13 +32,6 @@ export function SlashCommandPopup({ items, command }: SlashCommandPopupProps) {
       if (active) active.scrollIntoView({ block: 'nearest' })
     }
   }, [selectedGroupIdx, selectedCommandIdx])
-
-  const selectItem = useCallback(() => {
-    const group = items[selectedGroupIdx]
-    if (!group) return
-    const cmd = group.commands[selectedCommandIdx]
-    if (cmd) command(cmd)
-  }, [items, selectedGroupIdx, selectedCommandIdx, command])
 
   if (items.length === 0) return null
 
@@ -58,13 +51,10 @@ export function SlashCommandPopup({ items, command }: SlashCommandPopupProps) {
               <button
                 key={cmd.name}
                 data-active={isActive}
-                onPointerEnter={() => {
-                  setSelectedGroupIdx(gi)
-                  setSelectedCommandIdx(ci)
-                }}
+                onPointerEnter={() => onHover(gi, ci)}
                 onClick={(e) => {
                   e.stopPropagation()
-                  selectItem()
+                  command(cmd)
                 }}
                 className={`flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm ${
                   isActive ? 'bg-accent text-accent-foreground' : 'text-popover-foreground'
@@ -79,90 +69,4 @@ export function SlashCommandPopup({ items, command }: SlashCommandPopupProps) {
       ))}
     </div>
   )
-}
-
-export function handleKeyDown(
-  e: KeyboardEvent,
-  items: FilteredGroup[],
-  selectedGroupIdx: number,
-  selectedCommandIdx: number,
-  setSelectedGroupIdx: (v: number) => void,
-  setSelectedCommandIdx: (v: number) => void,
-  selectItem: () => void
-): boolean {
-  const flatCommands = items.flatMap((g) => g.commands)
-
-  switch (e.key) {
-    case 'ArrowDown':
-    case 'Tab':
-      e.preventDefault()
-      if (!e.shiftKey) {
-        const next = flatCommands.indexOf(
-          items[selectedGroupIdx]?.commands[selectedCommandIdx]
-        )
-        const nextIdx = next + 1
-        if (nextIdx < flatCommands.length) {
-          let count = 0
-          for (let gi = 0; gi < items.length; gi++) {
-            for (let ci = 0; ci < items[gi].commands.length; ci++) {
-              if (count === nextIdx) {
-                setSelectedGroupIdx(gi)
-                setSelectedCommandIdx(ci)
-                return true
-              }
-              count++
-            }
-          }
-        }
-      } else {
-        const prev = flatCommands.indexOf(
-          items[selectedGroupIdx]?.commands[selectedCommandIdx]
-        )
-        const prevIdx = prev - 1
-        if (prevIdx >= 0) {
-          let count = 0
-          for (let gi = 0; gi < items.length; gi++) {
-            for (let ci = 0; ci < items[gi].commands.length; ci++) {
-              if (count === prevIdx) {
-                setSelectedGroupIdx(gi)
-                setSelectedCommandIdx(ci)
-                return true
-              }
-              count++
-            }
-          }
-        }
-      }
-      return true
-    case 'ArrowUp':
-      e.preventDefault()
-      if (!e.shiftKey) {
-        const prev = flatCommands.indexOf(
-          items[selectedGroupIdx]?.commands[selectedCommandIdx]
-        )
-        const prevIdx = prev - 1
-        if (prevIdx >= 0) {
-          let count = 0
-          for (let gi = 0; gi < items.length; gi++) {
-            for (let ci = 0; ci < items[gi].commands.length; ci++) {
-              if (count === prevIdx) {
-                setSelectedGroupIdx(gi)
-                setSelectedCommandIdx(ci)
-                return true
-              }
-              count++
-            }
-          }
-        }
-      }
-      return true
-    case 'Enter':
-      e.preventDefault()
-      selectItem()
-      return true
-    case 'Escape':
-      return true
-    default:
-      return false
-  }
 }
