@@ -1,4 +1,9 @@
 @import "tailwindcss";
+/* edra-react ships pre-built JS with Tailwind utility classNames baked in
+   (bg-popover, text-muted-foreground, etc) but its own dist/ is gitignored
+   inside the package, so Tailwind's automatic content scan won't see them —
+   scan its readable source explicitly so those utilities actually compile. */
+@source "../../edra-react/src";
 
 :root {
   color-scheme: light;
@@ -20,6 +25,14 @@
   --content-width: 720px;
   --page-width: 1150px;
   --rail: clamp(0.5rem, 2vw, 2rem);
+
+  /* Bridge for edra-react's shadcn-convention CSS variables. */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --muted-foreground: var(--muted);
+  --primary: var(--accent);
+  --destructive: #dc2626;
+  --radius: 0.5rem;
 }
 
 [data-theme="dark"] {
@@ -37,6 +50,13 @@
   --surface: #1a1a1a;
   --surface-2: #1f1f1f;
   --toggle-active: #2e2e2e;
+
+  --background: var(--bg);
+  --foreground: var(--text);
+  --muted-foreground: var(--muted);
+  --primary: var(--accent);
+  --destructive: #f87171;
+  --radius: 0.5rem;
 }
 
 @theme inline {
@@ -54,6 +74,21 @@
   --color-surface-2: var(--surface-2);
   --color-ink: var(--ink);
   --color-paper: var(--paper);
+
+  /* edra-react's Tailwind utility classNames (bg-popover, text-muted-foreground,
+     etc) only compile if Tailwind knows these as color tokens — a plain
+     `var(--background)` fallback in :root isn't enough for utility generation. */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-muted-foreground: var(--muted);
+  --color-popover: var(--bg-2);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--accent);
+  --color-primary-foreground: #ffffff;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: #ffffff;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

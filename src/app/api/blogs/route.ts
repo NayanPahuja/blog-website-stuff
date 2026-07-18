@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db, schema } from "@/db/client";
 import { requireAdmin } from "@/lib/auth";
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export async function POST(request: NextRequest) {
   try {

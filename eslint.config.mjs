@@ -14,6 +14,7 @@ const eslintConfig = defineConfig([
     "drizzle/**",
     "next-env.d.ts",
     "*.tsbuildinfo",
+    "edra-react/**",
   ]),
 ]);
 

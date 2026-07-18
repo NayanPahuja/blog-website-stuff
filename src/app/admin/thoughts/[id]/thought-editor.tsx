@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { MarkdownEditor } from "@/components/editor/markdown-editor";
 import { TagInput } from "@/components/tags/tag-input";
@@ -29,6 +29,13 @@ export function ThoughtEditor({ thought }: { thought?: Thought }) {
   const [saved, setSaved] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [thoughtId, setThoughtId] = useState(thought?.id ?? null);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, []);
 
   // Load existing tags for the thought
   useEffect(() => {
@@ -102,21 +109,20 @@ export function ThoughtEditor({ thought }: { thought?: Thought }) {
   const handleAutoSave = useCallback(
     (md: string) => {
       setContentMd(md);
-      if (!isNew && thoughtId) {
-        const timer = setTimeout(() => {
-          fetch(`/api/thoughts/${thoughtId}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              contentMd: md, 
-              title: title.trim() || null,
-              description: description.trim() || null,
-              tagIds: tags.map((t) => t.id),
-            }),
-          }).catch(() => {});
-        }, 2000);
-        return () => clearTimeout(timer);
-      }
+      if (isNew || !thoughtId) return;
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      autoSaveTimer.current = setTimeout(() => {
+        fetch(`/api/thoughts/${thoughtId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contentMd: md,
+            title: title.trim() || null,
+            description: description.trim() || null,
+            tagIds: tags.map((t) => t.id),
+          }),
+        }).catch(() => {});
+      }, 2000);
     },
     [isNew, thoughtId, title, description, tags],
   );

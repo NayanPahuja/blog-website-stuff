@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { MarkdownEditor } from "@/components/editor/markdown-editor";
 import { TagInput } from "@/components/tags/tag-input";
@@ -32,6 +32,13 @@ export function BlogEditor({ blog }: { blog?: Blog }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isPublished, setIsPublished] = useState(blog?.isPublished ?? false);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, []);
 
   // Load existing tags for the blog
   useEffect(() => {
@@ -124,26 +131,25 @@ export function BlogEditor({ blog }: { blog?: Blog }) {
   const handleAutoSave = useCallback(
     (md: string) => {
       setContentMd(md);
-      if (!isNew && blog) {
-        const timer = setTimeout(() => {
-          const wordCount = md.split(/\s+/).length;
-          const readingTime = Math.ceil(wordCount / 200);
-          
-          fetch(`/api/blogs/${blog.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contentMd: md,
-              title: title.trim(),
-              slug: slug.trim(),
-              readingTime,
-              isPublished,
-              tagIds: tags.map((t) => t.id),
-            }),
-          }).catch(() => {});
-        }, 2000);
-        return () => clearTimeout(timer);
-      }
+      if (isNew || !blog) return;
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+      autoSaveTimer.current = setTimeout(() => {
+        const wordCount = md.split(/\s+/).length;
+        const readingTime = Math.ceil(wordCount / 200);
+
+        fetch(`/api/blogs/${blog.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contentMd: md,
+            title: title.trim(),
+            slug: slug.trim(),
+            readingTime,
+            isPublished,
+            tagIds: tags.map((t) => t.id),
+          }),
+        }).catch(() => {});
+      }, 2000);
     },
     [isNew, blog, title, slug, isPublished, tags],
   );
