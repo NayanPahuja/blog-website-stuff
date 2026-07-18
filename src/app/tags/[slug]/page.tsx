@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db, schema } from "@/db/client";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -21,27 +21,40 @@ export default async function TagDetailPage({
 
   const blogs = await db
     .select({
-      id: schema.blogs.id,
-      title: schema.blogs.title,
-      slug: schema.blogs.slug,
-      publishedAt: schema.blogs.publishedAt,
+      id: schema.contents.id,
+      title: schema.contents.title,
+      slug: schema.contents.slug,
+      publishedAt: schema.contents.publishedAt,
     })
-    .from(schema.blogTags)
-    .where(eq(schema.blogTags.tagId, tag.id))
-    .innerJoin(schema.blogs, eq(schema.blogTags.blogId, schema.blogs.id))
-    .orderBy(desc(schema.blogs.publishedAt));
+    .from(schema.contentTags)
+    .where(eq(schema.contentTags.tagId, tag.id))
+    .innerJoin(
+      schema.contents,
+      and(
+        eq(schema.contentTags.contentId, schema.contents.id),
+        eq(schema.contents.contentType, "blog"),
+        eq(schema.contents.isPublished, true),
+      ),
+    )
+    .orderBy(desc(schema.contents.publishedAt));
 
   const thoughts = await db
     .select({
-      id: schema.thoughts.id,
-      title: schema.thoughts.title,
-      description: schema.thoughts.description,
-      updatedAt: schema.thoughts.updatedAt,
+      id: schema.contents.id,
+      title: schema.contents.title,
+      description: schema.contents.description,
+      updatedAt: schema.contents.updatedAt,
     })
-    .from(schema.thoughtTags)
-    .where(eq(schema.thoughtTags.tagId, tag.id))
-    .innerJoin(schema.thoughts, eq(schema.thoughtTags.thoughtId, schema.thoughts.id))
-    .orderBy(desc(schema.thoughts.updatedAt));
+    .from(schema.contentTags)
+    .where(eq(schema.contentTags.tagId, tag.id))
+    .innerJoin(
+      schema.contents,
+      and(
+        eq(schema.contentTags.contentId, schema.contents.id),
+        eq(schema.contents.contentType, "thought"),
+      ),
+    )
+    .orderBy(desc(schema.contents.updatedAt));
 
   return (
     <div className="py-8 space-y-8">

@@ -1,34 +1,104 @@
 /**
  * Drizzle schema for Personal Knowledge Garden.
- * Mirrors TRD §4 (Data Model). Tables: tags, thoughts, blogs, projects,
- * thought_tags, blog_tags, project_tags, images, page_views.
+ *
+ * Single-table-inheritance content model: `contents` holds every piece of
+ * writing (thought, blog, project) with shared fields (title, body, publish
+ * state). Type-specific fields live in `blog_details` / `project_details`,
+ * keyed 1:1 on `contents.id` and FK-guarded so a `blog_details` row can only
+ * ever attach to a `contents` row where `content_type = 'blog'`.
+ *
+ * Publishing is an in-place transition, not a copy: a thought becomes a blog
+ * by flipping `content_type` to 'blog', inserting a `blog_details` row, and
+ * setting `slug` + `is_published` + `published_at`. Same row throughout —
+ * no separate origin/copy bookkeeping.
  *
  * NOTE: Row-Level Security (RLS) policies are applied at the Postgres level
- * (via Supabase), not here. This file defines shape only. See PLAN.md and
- * the per-phase migrations for RLS policy SQL.
+ * (via Supabase), not here. This file defines shape only.
  */
 import {
   pgTable,
   uuid,
   text,
   integer,
+  bigserial,
   timestamp,
   boolean,
   primaryKey,
   pgEnum,
+  unique,
+  uniqueIndex,
+  index,
+  foreignKey,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
-/**
- * thought.status lifecycle:
- *   private -> published_as_blog | published_as_project
- * Once a thought is published it points back at its published record via
- * `published_ref` (blogs.id or projects.id).
- */
-export const thoughtStatus = pgEnum("thought_status", [
-  "private",
-  "published_as_blog",
-  "published_as_project",
-]);
+export const contentType = pgEnum("content_type", ["thought", "blog", "project"]);
+
+export const contents = pgTable(
+  "contents",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    contentType: contentType("content_type").notNull(),
+    title: text("title"),
+    description: text("description"),
+    contentMd: text("content_md").notNull(),
+    slug: text("slug").unique(), // null allowed: private thoughts don't need one
+    isPublished: boolean("is_published").notNull().default(false),
+    isFeatured: boolean("is_featured").notNull().default(false),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // lets extension tables FK against (id, content_type), so a blog_details
+    // row can never attach to a row that isn't actually type='blog'
+    unique("contents_id_content_type_unique").on(t.id, t.contentType),
+    index("contents_type_published_idx").on(t.contentType, t.isPublished),
+  ],
+);
+
+// --- Type-specific extension tables (1:1 with contents) ---
+
+export const blogDetails = pgTable(
+  "blog_details",
+  {
+    contentId: uuid("content_id").primaryKey(),
+    contentType: contentType("content_type").notNull().default("blog"),
+    readingTime: integer("reading_time"),
+  },
+  (t) => [
+    foreignKey({
+      name: "blog_details_content_fk",
+      columns: [t.contentId, t.contentType],
+      foreignColumns: [contents.id, contents.contentType],
+    }).onDelete("cascade"),
+    check("blog_details_content_type_check", sql`${t.contentType} = 'blog'`),
+  ],
+);
+
+export const projectDetails = pgTable(
+  "project_details",
+  {
+    contentId: uuid("content_id").primaryKey(),
+    contentType: contentType("content_type").notNull().default("project"),
+    technologies: text("technologies").array(),
+    architectureMd: text("architecture_md"),
+    githubUrl: text("github_url"),
+    demoUrl: text("demo_url"),
+    lessonsLearnedMd: text("lessons_learned_md"),
+  },
+  (t) => [
+    foreignKey({
+      name: "project_details_content_fk",
+      columns: [t.contentId, t.contentType],
+      foreignColumns: [contents.id, contents.contentType],
+    }).onDelete("cascade"),
+    check("project_details_content_type_check", sql`${t.contentType} = 'project'`),
+  ],
+);
+
+// --- Shared tags, images, analytics — one of each, ever ---
 
 export const tags = pgTable("tags", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -37,89 +107,17 @@ export const tags = pgTable("tags", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const thoughts = pgTable("thoughts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  title: text("title"), // optional per PRD
-  description: text("description"), // short description/summary
-  contentMd: text("content_md").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  status: thoughtStatus("status").default("private").notNull(),
-  // Points to the blog or project this thought became once published.
-  // (blogs.id or projects.id — no single-table FK constraint; enforced in app logic.)
-  publishedRef: uuid("published_ref"),
-});
-
-export const blogs = pgTable("blogs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  thoughtId: uuid("thought_id").references(() => thoughts.id), // origin, nullable if written directly
-  title: text("title").notNull(),
-  slug: text("slug").unique().notNull(),
-  contentMd: text("content_md").notNull(),
-  readingTime: integer("reading_time"), // computed on save (minutes)
-  isPublished: boolean("is_published").default(false).notNull(),
-  isFeatured: boolean("is_featured").default(false).notNull(), // home page flag (Phase 5)
-  publishedAt: timestamp("published_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
-
-export const projects = pgTable("projects", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  thoughtId: uuid("thought_id").references(() => thoughts.id),
-  name: text("name").notNull(),
-  slug: text("slug").unique().notNull(),
-  description: text("description"),
-  technologies: text("technologies").array(),
-  architectureMd: text("architecture_md"),
-  githubUrl: text("github_url"),
-  demoUrl: text("demo_url"),
-  lessonsLearnedMd: text("lessons_learned_md"),
-  isPublished: boolean("is_published").default(false).notNull(),
-  isFeatured: boolean("is_featured").default(false).notNull(), // home page flag (Phase 5)
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
-
-// --- Tag junctions (tags work across all three content types) ---
-
-export const thoughtTags = pgTable(
-  "thought_tags",
+export const contentTags = pgTable(
+  "content_tags",
   {
-    thoughtId: uuid("thought_id")
+    contentId: uuid("content_id")
       .notNull()
-      .references(() => thoughts.id, { onDelete: "cascade" }),
+      .references(() => contents.id, { onDelete: "cascade" }),
     tagId: uuid("tag_id")
       .notNull()
       .references(() => tags.id, { onDelete: "cascade" }),
   },
-  (t) => [primaryKey({ columns: [t.thoughtId, t.tagId] })],
-);
-
-export const blogTags = pgTable(
-  "blog_tags",
-  {
-    blogId: uuid("blog_id")
-      .notNull()
-      .references(() => blogs.id, { onDelete: "cascade" }),
-    tagId: uuid("tag_id")
-      .notNull()
-      .references(() => tags.id, { onDelete: "cascade" }),
-  },
-  (t) => [primaryKey({ columns: [t.blogId, t.tagId] })],
-);
-
-export const projectTags = pgTable(
-  "project_tags",
-  {
-    projectId: uuid("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    tagId: uuid("tag_id")
-      .notNull()
-      .references(() => tags.id, { onDelete: "cascade" }),
-  },
-  (t) => [primaryKey({ columns: [t.projectId, t.tagId] })],
+  (t) => [primaryKey({ columns: [t.contentId, t.tagId] })],
 );
 
 export const images = pgTable("images", {
@@ -129,12 +127,38 @@ export const images = pgTable("images", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const pageViews = pgTable("page_views", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  blogId: uuid("blog_id").references(() => blogs.id),
-  viewedAt: timestamp("viewed_at", { withTimezone: true }).defaultNow().notNull(),
-  referrer: text("referrer"),
-});
+export const contentImages = pgTable(
+  "content_images",
+  {
+    contentId: uuid("content_id")
+      .notNull()
+      .references(() => contents.id, { onDelete: "cascade" }),
+    imageId: uuid("image_id")
+      .notNull()
+      .references(() => images.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    isCover: boolean("is_cover").notNull().default(false),
+  },
+  (t) => [
+    primaryKey({ columns: [t.contentId, t.imageId] }),
+    uniqueIndex("content_images_one_cover_idx")
+      .on(t.contentId)
+      .where(sql`${t.isCover}`),
+  ],
+);
+
+export const pageViews = pgTable(
+  "page_views",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    contentId: uuid("content_id")
+      .notNull()
+      .references(() => contents.id, { onDelete: "cascade" }),
+    viewedAt: timestamp("viewed_at", { withTimezone: true }).notNull().defaultNow(),
+    referrer: text("referrer"),
+  },
+  (t) => [index("page_views_content_time_idx").on(t.contentId, t.viewedAt.desc())],
+);
 
 // ---------------------------------------------------------------------------
 // Type exports (inferred from schema) — used across API + UI layers.
@@ -143,14 +167,14 @@ export const pageViews = pgTable("page_views", {
 export type Tag = typeof tags.$inferSelect;
 export type NewTag = typeof tags.$inferInsert;
 
-export type Thought = typeof thoughts.$inferSelect;
-export type NewThought = typeof thoughts.$inferInsert;
+export type Content = typeof contents.$inferSelect;
+export type NewContent = typeof contents.$inferInsert;
 
-export type Blog = typeof blogs.$inferSelect;
-export type NewBlog = typeof blogs.$inferInsert;
+export type BlogDetails = typeof blogDetails.$inferSelect;
+export type NewBlogDetails = typeof blogDetails.$inferInsert;
 
-export type Project = typeof projects.$inferSelect;
-export type NewProject = typeof projects.$inferInsert;
+export type ProjectDetails = typeof projectDetails.$inferSelect;
+export type NewProjectDetails = typeof projectDetails.$inferInsert;
 
 export type Image = typeof images.$inferSelect;
 export type NewImage = typeof images.$inferInsert;

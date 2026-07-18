@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db, schema } from "@/db/client";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +15,8 @@ export default async function ThoughtDetailPage({
 
   const [thought] = await db
     .select()
-    .from(schema.thoughts)
-    .where(eq(schema.thoughts.id, id));
+    .from(schema.contents)
+    .where(and(eq(schema.contents.id, id), eq(schema.contents.contentType, "thought")));
 
   if (!thought) notFound();
 
@@ -27,9 +27,9 @@ export default async function ThoughtDetailPage({
       name: schema.tags.name,
       slug: schema.tags.slug,
     })
-    .from(schema.thoughtTags)
-    .where(eq(schema.thoughtTags.thoughtId, id))
-    .innerJoin(schema.tags, eq(schema.thoughtTags.tagId, schema.tags.id));
+    .from(schema.contentTags)
+    .where(eq(schema.contentTags.contentId, id))
+    .innerJoin(schema.tags, eq(schema.contentTags.tagId, schema.tags.id));
 
   return (
     <article className="py-8 space-y-6">

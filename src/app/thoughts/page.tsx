@@ -7,16 +7,16 @@ export const dynamic = "force-dynamic";
 export default async function ThoughtsPage() {
   const thoughts = await db
     .select({
-      id: schema.thoughts.id,
-      title: schema.thoughts.title,
-      description: schema.thoughts.description,
-      contentMd: schema.thoughts.contentMd,
-      createdAt: schema.thoughts.createdAt,
-      updatedAt: schema.thoughts.updatedAt,
-      status: schema.thoughts.status,
+      id: schema.contents.id,
+      title: schema.contents.title,
+      description: schema.contents.description,
+      contentMd: schema.contents.contentMd,
+      createdAt: schema.contents.createdAt,
+      updatedAt: schema.contents.updatedAt,
     })
-    .from(schema.thoughts)
-    .orderBy(desc(schema.thoughts.updatedAt));
+    .from(schema.contents)
+    .where(eq(schema.contents.contentType, "thought"))
+    .orderBy(desc(schema.contents.updatedAt));
 
   const thoughtIds = thoughts.map((t) => t.id);
   const tagsByThought: Record<string, Array<{ name: string; slug: string }>> = {};
@@ -24,16 +24,16 @@ export default async function ThoughtsPage() {
   if (thoughtIds.length > 0) {
     const rows = await db
       .select({
-        thoughtId: schema.thoughtTags.thoughtId,
+        contentId: schema.contentTags.contentId,
         name: schema.tags.name,
         slug: schema.tags.slug,
       })
-      .from(schema.thoughtTags)
-      .where(inArray(schema.thoughtTags.thoughtId, thoughtIds))
-      .innerJoin(schema.tags, eq(schema.thoughtTags.tagId, schema.tags.id));
+      .from(schema.contentTags)
+      .where(inArray(schema.contentTags.contentId, thoughtIds))
+      .innerJoin(schema.tags, eq(schema.contentTags.tagId, schema.tags.id));
     for (const row of rows) {
-      if (!tagsByThought[row.thoughtId]) tagsByThought[row.thoughtId] = [];
-      tagsByThought[row.thoughtId].push({ name: row.name, slug: row.slug });
+      if (!tagsByThought[row.contentId]) tagsByThought[row.contentId] = [];
+      tagsByThought[row.contentId].push({ name: row.name, slug: row.slug });
     }
   }
 

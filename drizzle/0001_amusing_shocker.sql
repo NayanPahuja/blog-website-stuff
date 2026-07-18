@@ -1,1 +1,0 @@
-ALTER TABLE "thoughts" ADD COLUMN "description" text;

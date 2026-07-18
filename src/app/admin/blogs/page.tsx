@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db, schema } from "@/db/client";
 import { requireAdmin } from "@/lib/auth";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -9,9 +9,19 @@ export default async function AdminBlogsPage() {
   await requireAdmin();
 
   const blogs = await db
-    .select()
-    .from(schema.blogs)
-    .orderBy(desc(schema.blogs.updatedAt));
+    .select({
+      id: schema.contents.id,
+      title: schema.contents.title,
+      slug: schema.contents.slug,
+      isPublished: schema.contents.isPublished,
+      isFeatured: schema.contents.isFeatured,
+      updatedAt: schema.contents.updatedAt,
+      readingTime: schema.blogDetails.readingTime,
+    })
+    .from(schema.contents)
+    .innerJoin(schema.blogDetails, eq(schema.blogDetails.contentId, schema.contents.id))
+    .where(eq(schema.contents.contentType, "blog"))
+    .orderBy(desc(schema.contents.updatedAt));
 
   return (
     <div className="py-8">

@@ -16,8 +16,6 @@ type Thought = {
   title: string | null;
   description: string | null;
   contentMd: string;
-  status: "private" | "published_as_blog" | "published_as_project";
-  publishedRef: string | null;
 };
 
 export function ThoughtEditor({ thought }: { thought?: Thought }) {
@@ -31,8 +29,6 @@ export function ThoughtEditor({ thought }: { thought?: Thought }) {
   const [saved, setSaved] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [thoughtId, setThoughtId] = useState(thought?.id ?? null);
-
-  const isPublished = thought?.status === "published_as_blog" || thought?.status === "published_as_project";
 
   // Load existing tags for the thought
   useEffect(() => {
@@ -138,7 +134,7 @@ export function ThoughtEditor({ thought }: { thought?: Thought }) {
 
       if (res.ok) {
         const data = await res.json();
-        router.push(`/admin/blogs/${data.blogId}`);
+        router.push(`/admin/blogs/${data.id}`);
       } else {
         const data = await res.json();
         alert(data.error ?? "Failed to publish.");
@@ -163,7 +159,7 @@ export function ThoughtEditor({ thought }: { thought?: Thought }) {
 
       if (res.ok) {
         const data = await res.json();
-        router.push(`/admin/projects/${data.projectId}`);
+        router.push(`/admin/projects/${data.id}`);
       } else {
         const data = await res.json();
         alert(data.error ?? "Failed to publish.");
@@ -189,7 +185,7 @@ export function ThoughtEditor({ thought }: { thought?: Thought }) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {thoughtId && !isPublished && (
+          {thoughtId && (
             <div className="relative group">
               <button
                 type="button"

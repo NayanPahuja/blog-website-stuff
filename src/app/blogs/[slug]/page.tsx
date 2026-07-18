@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { db, schema } from "@/db/client";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
 
@@ -18,9 +18,17 @@ export default async function BlogDetailPage({
   const isPreview = preview === "true";
 
   const [blog] = await db
-    .select()
-    .from(schema.blogs)
-    .where(eq(schema.blogs.slug, slug));
+    .select({
+      id: schema.contents.id,
+      title: schema.contents.title,
+      contentMd: schema.contents.contentMd,
+      isPublished: schema.contents.isPublished,
+      publishedAt: schema.contents.publishedAt,
+      readingTime: schema.blogDetails.readingTime,
+    })
+    .from(schema.contents)
+    .innerJoin(schema.blogDetails, eq(schema.blogDetails.contentId, schema.contents.id))
+    .where(and(eq(schema.contents.slug, slug), eq(schema.contents.contentType, "blog")));
 
   if (!blog) notFound();
   if (!blog.isPublished && !isPreview) notFound();
@@ -31,9 +39,9 @@ export default async function BlogDetailPage({
       name: schema.tags.name,
       slug: schema.tags.slug,
     })
-    .from(schema.blogTags)
-    .where(eq(schema.blogTags.blogId, blog.id))
-    .innerJoin(schema.tags, eq(schema.blogTags.tagId, schema.tags.id));
+    .from(schema.contentTags)
+    .where(eq(schema.contentTags.contentId, blog.id))
+    .innerJoin(schema.tags, eq(schema.contentTags.tagId, schema.tags.id));
 
   return (
     <article className="py-8 space-y-6">

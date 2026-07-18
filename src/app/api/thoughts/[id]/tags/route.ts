@@ -16,9 +16,9 @@ export async function GET(
       name: schema.tags.name,
       slug: schema.tags.slug,
     })
-    .from(schema.thoughtTags)
-    .where(eq(schema.thoughtTags.thoughtId, id))
-    .innerJoin(schema.tags, eq(schema.thoughtTags.tagId, schema.tags.id));
+    .from(schema.contentTags)
+    .where(eq(schema.contentTags.contentId, id))
+    .innerJoin(schema.tags, eq(schema.contentTags.tagId, schema.tags.id));
 
   return NextResponse.json(tags);
 }

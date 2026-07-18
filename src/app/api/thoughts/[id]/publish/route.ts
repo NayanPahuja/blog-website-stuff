@@ -1,12 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db, schema } from "@/db/client";
 import { requireAdmin } from "@/lib/auth";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import slug from "slug";
 
+/**
+ * Publishing is an in-place type transition, not a copy: the thought's row in
+ * `contents` becomes a blog/project row (same id, same content_md/tags),
+ * gains a slug, and gets a `blog_details`/`project_details` extension row.
+ * `is_published` is untouched here — it stays a draft until explicitly
+ * published from the blog/project editor.
+ */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     await requireAdmin();
@@ -17,156 +24,64 @@ export async function POST(
       return NextResponse.json({ error: "Invalid type" }, { status: 400 });
     }
 
-    // Get the thought
     const [thought] = await db
       .select()
-      .from(schema.thoughts)
-      .where(eq(schema.thoughts.id, id));
+      .from(schema.contents)
+      .where(and(eq(schema.contents.id, id), eq(schema.contents.contentType, "thought")));
 
     if (!thought) {
       return NextResponse.json({ error: "Thought not found" }, { status: 404 });
     }
 
-    if (thought.status !== "private") {
-      return NextResponse.json(
-        { error: "Thought is already published" },
-        { status: 400 }
-      );
-    }
-
     if (!thought.title?.trim()) {
       return NextResponse.json(
         { error: "Title is required for publishing" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Generate slug from title
     const baseSlug = slug(thought.title.trim().toLowerCase());
-    
-    if (type === "blog") {
-      // Check if slug exists
-      let finalSlug = baseSlug;
-      let counter = 1;
-      while (true) {
-        const [existing] = await db
-          .select()
-          .from(schema.blogs)
-          .where(eq(schema.blogs.slug, finalSlug))
-          .limit(1);
-        
-        if (!existing) break;
-        finalSlug = `${baseSlug}-${counter}`;
-        counter++;
-      }
+    let finalSlug = baseSlug;
+    let counter = 1;
+    while (true) {
+      const [existing] = await db
+        .select({ id: schema.contents.id })
+        .from(schema.contents)
+        .where(eq(schema.contents.slug, finalSlug))
+        .limit(1);
 
-      // Calculate reading time (rough estimate: 200 words per minute)
+      if (!existing) break;
+      finalSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    if (type === "blog") {
       const wordCount = thought.contentMd.split(/\s+/).length;
       const readingTime = Math.ceil(wordCount / 200);
 
-      // Create blog
-      const [blog] = await db
-        .insert(schema.blogs)
-        .values({
-          thoughtId: thought.id,
-          title: thought.title,
-          slug: finalSlug,
-          contentMd: thought.contentMd,
-          readingTime,
-          isPublished: false, // Start as draft
-          isFeatured: false,
-        })
-        .returning();
-
-      // Copy tags from thought to blog
-      const thoughtTags = await db
-        .select({ tagId: schema.thoughtTags.tagId })
-        .from(schema.thoughtTags)
-        .where(eq(schema.thoughtTags.thoughtId, thought.id));
-
-      if (thoughtTags.length > 0) {
-        await db.insert(schema.blogTags).values(
-          thoughtTags.map((t) => ({
-            blogId: blog.id,
-            tagId: t.tagId,
-          }))
-        );
-      }
-
-      // Update thought status
       await db
-        .update(schema.thoughts)
-        .set({
-          status: "published_as_blog",
-          publishedRef: blog.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.thoughts.id, thought.id));
+        .update(schema.contents)
+        .set({ contentType: "blog", slug: finalSlug, updatedAt: new Date() })
+        .where(eq(schema.contents.id, id));
 
-      return NextResponse.json({ blogId: blog.id, slug: finalSlug });
+      await db.insert(schema.blogDetails).values({ contentId: id, readingTime });
+
+      return NextResponse.json({ id, slug: finalSlug });
     } else {
-      // type === "project"
-      // Check if slug exists
-      let finalSlug = baseSlug;
-      let counter = 1;
-      while (true) {
-        const [existing] = await db
-          .select()
-          .from(schema.projects)
-          .where(eq(schema.projects.slug, finalSlug))
-          .limit(1);
-        
-        if (!existing) break;
-        finalSlug = `${baseSlug}-${counter}`;
-        counter++;
-      }
-
-      // Create project
-      const [project] = await db
-        .insert(schema.projects)
-        .values({
-          thoughtId: thought.id,
-          name: thought.title,
-          slug: finalSlug,
-          description: thought.description,
-          architectureMd: thought.contentMd,
-          isPublished: false, // Start as draft
-          isFeatured: false,
-        })
-        .returning();
-
-      // Copy tags from thought to project
-      const thoughtTags = await db
-        .select({ tagId: schema.thoughtTags.tagId })
-        .from(schema.thoughtTags)
-        .where(eq(schema.thoughtTags.thoughtId, thought.id));
-
-      if (thoughtTags.length > 0) {
-        await db.insert(schema.projectTags).values(
-          thoughtTags.map((t) => ({
-            projectId: project.id,
-            tagId: t.tagId,
-          }))
-        );
-      }
-
-      // Update thought status
       await db
-        .update(schema.thoughts)
-        .set({
-          status: "published_as_project",
-          publishedRef: project.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(schema.thoughts.id, thought.id));
+        .update(schema.contents)
+        .set({ contentType: "project", slug: finalSlug, updatedAt: new Date() })
+        .where(eq(schema.contents.id, id));
 
-      return NextResponse.json({ projectId: project.id, slug: finalSlug });
+      await db.insert(schema.projectDetails).values({ contentId: id });
+
+      return NextResponse.json({ id, slug: finalSlug });
     }
   } catch (err) {
     console.error("[publish] Error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

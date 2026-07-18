@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db/client";
 import { requireAdmin } from "@/lib/auth";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export async function GET(
   _request: Request,
@@ -12,8 +12,8 @@ export async function GET(
 
   const [thought] = await db
     .select()
-    .from(schema.thoughts)
-    .where(eq(schema.thoughts.id, id));
+    .from(schema.contents)
+    .where(and(eq(schema.contents.id, id), eq(schema.contents.contentType, "thought")));
 
   if (!thought) {
     return NextResponse.json({ error: "Thought not found." }, { status: 404 });
@@ -40,12 +40,11 @@ export async function PATCH(
     return NextResponse.json({ error: "No fields to update." }, { status: 400 });
   }
 
-  // Update thought fields
   if (Object.keys(updates).length > 0) {
     const [thought] = await db
-      .update(schema.thoughts)
+      .update(schema.contents)
       .set(updates)
-      .where(eq(schema.thoughts.id, id))
+      .where(and(eq(schema.contents.id, id), eq(schema.contents.contentType, "thought")))
       .returning();
 
     if (!thought) {
@@ -53,28 +52,23 @@ export async function PATCH(
     }
   }
 
-  // Update tags if provided
   if (Array.isArray(body.tagIds)) {
-    // Remove existing tags
-    await db
-      .delete(schema.thoughtTags)
-      .where(eq(schema.thoughtTags.thoughtId, id));
+    await db.delete(schema.contentTags).where(eq(schema.contentTags.contentId, id));
 
-    // Add new tags
     if (body.tagIds.length > 0) {
-      await db.insert(schema.thoughtTags).values(
+      await db.insert(schema.contentTags).values(
         body.tagIds.map((tagId: string) => ({
-          thoughtId: id,
+          contentId: id,
           tagId,
-        }))
+        })),
       );
     }
   }
 
   const [thought] = await db
     .select()
-    .from(schema.thoughts)
-    .where(eq(schema.thoughts.id, id));
+    .from(schema.contents)
+    .where(eq(schema.contents.id, id));
 
   return NextResponse.json(thought);
 }
@@ -87,8 +81,8 @@ export async function DELETE(
   const { id } = await params;
 
   const [thought] = await db
-    .delete(schema.thoughts)
-    .where(eq(schema.thoughts.id, id))
+    .delete(schema.contents)
+    .where(and(eq(schema.contents.id, id), eq(schema.contents.contentType, "thought")))
     .returning();
 
   if (!thought) {

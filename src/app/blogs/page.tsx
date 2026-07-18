@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { db, schema } from "@/db/client";
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -10,19 +10,19 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function BlogsPage() {
-  let blogs: Array<{ id: string; title: string; slug: string; publishedAt: Date | null }> = [];
+  let blogs: Array<{ id: string; title: string | null; slug: string | null; publishedAt: Date | null }> = [];
 
   try {
     blogs = await db
       .select({
-        id: schema.blogs.id,
-        title: schema.blogs.title,
-        slug: schema.blogs.slug,
-        publishedAt: schema.blogs.publishedAt,
+        id: schema.contents.id,
+        title: schema.contents.title,
+        slug: schema.contents.slug,
+        publishedAt: schema.contents.publishedAt,
       })
-      .from(schema.blogs)
-      .where(eq(schema.blogs.isPublished, true))
-      .orderBy(desc(schema.blogs.publishedAt));
+      .from(schema.contents)
+      .where(and(eq(schema.contents.contentType, "blog"), eq(schema.contents.isPublished, true)))
+      .orderBy(desc(schema.contents.publishedAt));
   } catch {}
 
   const blogIds = blogs.map((b) => b.id);
@@ -31,16 +31,16 @@ export default async function BlogsPage() {
   if (blogIds.length > 0) {
     const rows = await db
       .select({
-        blogId: schema.blogTags.blogId,
+        contentId: schema.contentTags.contentId,
         name: schema.tags.name,
         slug: schema.tags.slug,
       })
-      .from(schema.blogTags)
-      .where(inArray(schema.blogTags.blogId, blogIds))
-      .innerJoin(schema.tags, eq(schema.blogTags.tagId, schema.tags.id));
+      .from(schema.contentTags)
+      .where(inArray(schema.contentTags.contentId, blogIds))
+      .innerJoin(schema.tags, eq(schema.contentTags.tagId, schema.tags.id));
     for (const row of rows) {
-      if (!tagsByBlog[row.blogId]) tagsByBlog[row.blogId] = [];
-      tagsByBlog[row.blogId].push({ name: row.name, slug: row.slug });
+      if (!tagsByBlog[row.contentId]) tagsByBlog[row.contentId] = [];
+      tagsByBlog[row.contentId].push({ name: row.name, slug: row.slug });
     }
   }
 

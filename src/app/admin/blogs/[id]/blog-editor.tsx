@@ -13,9 +13,8 @@ type Tag = {
 
 type Blog = {
   id: string;
-  thoughtId: string | null;
-  title: string;
-  slug: string;
+  title: string | null;
+  slug: string | null;
   contentMd: string;
   readingTime: number | null;
   isPublished: boolean;

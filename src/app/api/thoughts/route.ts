@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db/client";
 import { requireAdmin } from "@/lib/auth";
-import { desc } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 export async function GET() {
   await requireAdmin();
   const thoughts = await db
     .select()
-    .from(schema.thoughts)
-    .orderBy(desc(schema.thoughts.createdAt));
+    .from(schema.contents)
+    .where(eq(schema.contents.contentType, "thought"))
+    .orderBy(desc(schema.contents.createdAt));
   return NextResponse.json(thoughts);
 }
 
@@ -25,21 +26,21 @@ export async function POST(request: Request) {
   }
 
   const [thought] = await db
-    .insert(schema.thoughts)
-    .values({ 
-      title: title || null, 
+    .insert(schema.contents)
+    .values({
+      contentType: "thought",
+      title: title || null,
       description: description || null,
-      contentMd 
+      contentMd,
     })
     .returning();
 
-  // Add tags
   if (tagIds.length > 0) {
-    await db.insert(schema.thoughtTags).values(
+    await db.insert(schema.contentTags).values(
       tagIds.map((tagId: string) => ({
-        thoughtId: thought.id,
+        contentId: thought.id,
         tagId,
-      }))
+      })),
     );
   }
 

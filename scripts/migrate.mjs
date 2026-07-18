@@ -2,14 +2,12 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 
 import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 
-const sql = postgres(process.env.DATABASE_URL);
+const sql = postgres(process.env.DATABASE_URL, { max: 1 });
+const db = drizzle(sql);
 
-try {
-  await sql`ALTER TABLE "thoughts" ADD COLUMN IF NOT EXISTS "description" text`;
-  console.log("Added description column to thoughts table");
-} catch (e) {
-  console.error("Migration failed:", e.message);
-}
+await migrate(db, { migrationsFolder: "./drizzle" });
 
 await sql.end();

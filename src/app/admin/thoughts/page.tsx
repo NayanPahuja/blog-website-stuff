@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db, schema } from "@/db/client";
 import { requireAdmin } from "@/lib/auth";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { ThoughtActions } from "./thought-actions";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +11,9 @@ export default async function AdminThoughtsPage() {
 
   const thoughts = await db
     .select()
-    .from(schema.thoughts)
-    .orderBy(desc(schema.thoughts.updatedAt));
+    .from(schema.contents)
+    .where(eq(schema.contents.contentType, "thought"))
+    .orderBy(desc(schema.contents.updatedAt));
 
   return (
     <div className="py-8 space-y-6">
@@ -47,7 +48,7 @@ export default async function AdminThoughtsPage() {
               </p>
               <p className="text-xs text-[var(--faint)] mt-0.5">
                 {new Date(thought.updatedAt).toLocaleDateString()} &middot;{" "}
-                <span className="capitalize">{thought.status.replace(/_/g, " ")}</span>
+                <span>{thought.isPublished ? "Published" : "Private draft"}</span>
                 &middot; {thought.contentMd.length} chars
               </p>
             </Link>

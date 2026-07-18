@@ -1,15 +1,160 @@
 {
-  "id": "80f339b3-86c2-4645-86aa-2674dd0b3284",
+  "id": "9b3b7ee2-e787-4010-849e-a94a05a1b74c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.blog_tags": {
-      "name": "blog_tags",
+    "public.blog_details": {
+      "name": "blog_details",
       "schema": "",
       "columns": {
-        "blog_id": {
-          "name": "blog_id",
+        "content_id": {
+          "name": "content_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "content_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'blog'"
+        },
+        "reading_time": {
+          "name": "reading_time",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "blog_details_content_fk": {
+          "name": "blog_details_content_fk",
+          "tableFrom": "blog_details",
+          "tableTo": "contents",
+          "columnsFrom": [
+            "content_id",
+            "content_type"
+          ],
+          "columnsTo": [
+            "id",
+            "content_type"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "blog_details_content_type_check": {
+          "name": "blog_details_content_type_check",
+          "value": "\"blog_details\".\"content_type\" = 'blog'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.content_images": {
+      "name": "content_images",
+      "schema": "",
+      "columns": {
+        "content_id": {
+          "name": "content_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "image_id": {
+          "name": "image_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "is_cover": {
+          "name": "is_cover",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {
+        "content_images_one_cover_idx": {
+          "name": "content_images_one_cover_idx",
+          "columns": [
+            {
+              "expression": "content_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"content_images\".\"is_cover\"",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "content_images_content_id_contents_id_fk": {
+          "name": "content_images_content_id_contents_id_fk",
+          "tableFrom": "content_images",
+          "tableTo": "contents",
+          "columnsFrom": [
+            "content_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "content_images_image_id_images_id_fk": {
+          "name": "content_images_image_id_images_id_fk",
+          "tableFrom": "content_images",
+          "tableTo": "images",
+          "columnsFrom": [
+            "image_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "content_images_content_id_image_id_pk": {
+          "name": "content_images_content_id_image_id_pk",
+          "columns": [
+            "content_id",
+            "image_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.content_tags": {
+      "name": "content_tags",
+      "schema": "",
+      "columns": {
+        "content_id": {
+          "name": "content_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -23,12 +168,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "blog_tags_blog_id_blogs_id_fk": {
-          "name": "blog_tags_blog_id_blogs_id_fk",
-          "tableFrom": "blog_tags",
-          "tableTo": "blogs",
+        "content_tags_content_id_contents_id_fk": {
+          "name": "content_tags_content_id_contents_id_fk",
+          "tableFrom": "content_tags",
+          "tableTo": "contents",
           "columnsFrom": [
-            "blog_id"
+            "content_id"
           ],
           "columnsTo": [
             "id"
@@ -36,9 +181,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "blog_tags_tag_id_tags_id_fk": {
-          "name": "blog_tags_tag_id_tags_id_fk",
-          "tableFrom": "blog_tags",
+        "content_tags_tag_id_tags_id_fk": {
+          "name": "content_tags_tag_id_tags_id_fk",
+          "tableFrom": "content_tags",
           "tableTo": "tags",
           "columnsFrom": [
             "tag_id"
@@ -51,10 +196,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "blog_tags_blog_id_tag_id_pk": {
-          "name": "blog_tags_blog_id_tag_id_pk",
+        "content_tags_content_id_tag_id_pk": {
+          "name": "content_tags_content_id_tag_id_pk",
           "columns": [
-            "blog_id",
+            "content_id",
             "tag_id"
           ]
         }
@@ -64,8 +209,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.blogs": {
-      "name": "blogs",
+    "public.contents": {
+      "name": "contents",
       "schema": "",
       "columns": {
         "id": {
@@ -75,23 +220,24 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "thought_id": {
-          "name": "thought_id",
-          "type": "uuid",
+        "content_type": {
+          "name": "content_type",
+          "type": "content_type",
+          "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "title": {
           "name": "title",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "slug": {
-          "name": "slug",
+        "description": {
+          "name": "description",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "content_md": {
           "name": "content_md",
@@ -99,9 +245,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "reading_time": {
-          "name": "reading_time",
-          "type": "integer",
+        "slug": {
+          "name": "slug",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -140,29 +286,45 @@
           "default": "now()"
         }
       },
-      "indexes": {},
-      "foreignKeys": {
-        "blogs_thought_id_thoughts_id_fk": {
-          "name": "blogs_thought_id_thoughts_id_fk",
-          "tableFrom": "blogs",
-          "tableTo": "thoughts",
-          "columnsFrom": [
-            "thought_id"
+      "indexes": {
+        "contents_type_published_idx": {
+          "name": "contents_type_published_idx",
+          "columns": [
+            {
+              "expression": "content_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_published",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
           ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "blogs_slug_unique": {
-          "name": "blogs_slug_unique",
+        "contents_slug_unique": {
+          "name": "contents_slug_unique",
           "nullsNotDistinct": false,
           "columns": [
             "slug"
+          ]
+        },
+        "contents_id_content_type_unique": {
+          "name": "contents_id_content_type_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id",
+            "content_type"
           ]
         }
       },
@@ -215,16 +377,15 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "bigserial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "blog_id": {
-          "name": "blog_id",
+        "content_id": {
+          "name": "content_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "viewed_at": {
           "name": "viewed_at",
@@ -240,19 +401,41 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "page_views_content_time_idx": {
+          "name": "page_views_content_time_idx",
+          "columns": [
+            {
+              "expression": "content_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "viewed_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "page_views_blog_id_blogs_id_fk": {
-          "name": "page_views_blog_id_blogs_id_fk",
+        "page_views_content_id_contents_id_fk": {
+          "name": "page_views_content_id_contents_id_fk",
           "tableFrom": "page_views",
-          "tableTo": "blogs",
+          "tableTo": "contents",
           "columnsFrom": [
-            "blog_id"
+            "content_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
@@ -262,100 +445,23 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.project_tags": {
-      "name": "project_tags",
+    "public.project_details": {
+      "name": "project_details",
       "schema": "",
       "columns": {
-        "project_id": {
-          "name": "project_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tag_id": {
-          "name": "tag_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "project_tags_project_id_projects_id_fk": {
-          "name": "project_tags_project_id_projects_id_fk",
-          "tableFrom": "project_tags",
-          "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "project_tags_tag_id_tags_id_fk": {
-          "name": "project_tags_tag_id_tags_id_fk",
-          "tableFrom": "project_tags",
-          "tableTo": "tags",
-          "columnsFrom": [
-            "tag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "project_tags_project_id_tag_id_pk": {
-          "name": "project_tags_project_id_tag_id_pk",
-          "columns": [
-            "project_id",
-            "tag_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.projects": {
-      "name": "projects",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
+        "content_id": {
+          "name": "content_id",
           "type": "uuid",
           "primaryKey": true,
+          "notNull": true
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "content_type",
+          "typeSchema": "public",
+          "primaryKey": false,
           "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "thought_id": {
-          "name": "thought_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "slug": {
-          "name": "slug",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "default": "'project'"
         },
         "technologies": {
           "name": "technologies",
@@ -386,64 +492,35 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "is_published": {
-          "name": "is_published",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_featured": {
-          "name": "is_featured",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "projects_thought_id_thoughts_id_fk": {
-          "name": "projects_thought_id_thoughts_id_fk",
-          "tableFrom": "projects",
-          "tableTo": "thoughts",
+        "project_details_content_fk": {
+          "name": "project_details_content_fk",
+          "tableFrom": "project_details",
+          "tableTo": "contents",
           "columnsFrom": [
-            "thought_id"
+            "content_id",
+            "content_type"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "content_type"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "projects_slug_unique": {
-          "name": "projects_slug_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "project_details_content_type_check": {
+          "name": "project_details_content_type_check",
+          "value": "\"project_details\".\"content_type\" = 'project'"
         }
       },
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.tags": {
@@ -499,136 +576,16 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
-    },
-    "public.thought_tags": {
-      "name": "thought_tags",
-      "schema": "",
-      "columns": {
-        "thought_id": {
-          "name": "thought_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tag_id": {
-          "name": "tag_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "thought_tags_thought_id_thoughts_id_fk": {
-          "name": "thought_tags_thought_id_thoughts_id_fk",
-          "tableFrom": "thought_tags",
-          "tableTo": "thoughts",
-          "columnsFrom": [
-            "thought_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "thought_tags_tag_id_tags_id_fk": {
-          "name": "thought_tags_tag_id_tags_id_fk",
-          "tableFrom": "thought_tags",
-          "tableTo": "tags",
-          "columnsFrom": [
-            "tag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "thought_tags_thought_id_tag_id_pk": {
-          "name": "thought_tags_thought_id_tag_id_pk",
-          "columns": [
-            "thought_id",
-            "tag_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.thoughts": {
-      "name": "thoughts",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "content_md": {
-          "name": "content_md",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "status": {
-          "name": "status",
-          "type": "thought_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'private'"
-        },
-        "published_ref": {
-          "name": "published_ref",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
     }
   },
   "enums": {
-    "public.thought_status": {
-      "name": "thought_status",
+    "public.content_type": {
+      "name": "content_type",
       "schema": "public",
       "values": [
-        "private",
-        "published_as_blog",
-        "published_as_project"
+        "thought",
+        "blog",
+        "project"
       ]
     }
   },
