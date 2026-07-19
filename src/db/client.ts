@@ -40,8 +40,20 @@ function getClient() {
     _query = postgres(connectionString, {
       // Pooled/Supabase transaction mode requires `prepare: false`.
       prepare: false,
-      // `max` is kept modest; Workers isolates are short-lived.
-      max: 5,
+      // One connection per isolate is enough for a low-traffic site.
+      max: 1,
+      // Cloudflare silently reaps idle TCP sockets between requests, and
+      // Supabase's pooler closes them too. If a warm isolate reuses such a
+      // half-open socket, postgres.js waits forever ("Connection closed" /
+      // Worker 1101 hung-request). Closing idle connections after 1s forces
+      // a fresh socket for the next request instead of reusing a dead one.
+      idle_timeout: 1,
+      // Recycle connections aggressively as an extra guard against stale
+      // sockets surviving in a long-lived warm isolate.
+      max_lifetime: 60,
+      // Fail fast on connect instead of hanging until the runtime cancels
+      // the request.
+      connect_timeout: 10,
     });
     _db = drizzle(_query, { schema });
   }
