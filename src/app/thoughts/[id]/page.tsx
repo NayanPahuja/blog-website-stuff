@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db, schema } from "@/db/client";
 import { and, eq } from "drizzle-orm";
-import { MarkdownRenderer } from "@/components/markdown/markdown-renderer";
+import { ContentReader } from "@/components/editor/content-reader";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +72,7 @@ export default async function ThoughtDetailPage({
         </div>
       </header>
 
-      <MarkdownRenderer content={thought.contentMd} />
+      <ContentReader content={thought.contentMd} />
     </article>
   );
 }

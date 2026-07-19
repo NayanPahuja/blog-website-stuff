@@ -14,6 +14,10 @@ function applyTheme(preference: Theme) {
   const theme = resolveTheme(preference);
   document.documentElement.setAttribute("data-theme", theme);
   document.documentElement.setAttribute("data-theme-preference", preference);
+  // edra-react's onedark.css (code block syntax highlighting) keys its dark
+  // variant off `html.dark`, the shadcn/Tailwind convention — this app uses
+  // `data-theme`. Set both so third-party CSS relying on the class still works.
+  document.documentElement.classList.toggle("dark", theme === "dark");
 }
 
 function createThemeStore() {

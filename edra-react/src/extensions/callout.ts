@@ -34,14 +34,34 @@ export const Callout = (component: ComponentType<any>) =>
       },
     },
 
-    parseMarkdown: (token: any, helpers: any) => ({
-      type: 'callout',
-      attrs: { emoji: token.emoji },
-      content: helpers.parseChildren(token.tokens || []),
-    }),
+    // `token.tokens` here was always undefined — the custom tokenizer above
+    // only ever sets `{type, raw, emoji, text}`, never `tokens`. That made
+    // `helpers.parseChildren(token.tokens || [])` always parse an empty
+    // array, so every callout loaded from markdown got zero paragraphs
+    // (content: []) regardless of what text it actually contained — the
+    // "text vanishes after saving" bug. Actually convert the captured
+    // `token.text` into paragraph(s) using the real parse helpers instead.
+    parseMarkdown: (token: any, helpers: any) => {
+      const rawText = (token.text || '').trim()
+      const paragraphs = rawText.length > 0 ? rawText.split(/\n{2,}/) : ['']
+      return {
+        type: 'callout',
+        attrs: { emoji: token.emoji },
+        content: paragraphs.map((paraText: string) => ({
+          type: 'paragraph',
+          content: helpers.parseInline(helpers.tokenizeInline(paraText)),
+        })),
+      }
+    },
 
     renderMarkdown: (node: any, helpers: any) => {
-      const content = helpers.renderChildren(node)
+      // Passing `node` itself (instead of its content array) here made
+      // @tiptap/markdown's renderChildren() re-select this same callout
+      // handler for its own children — infinite recursion, "Maximum call
+      // stack size exceeded" on every save. Pass the paragraph array
+      // directly so renderChildren dispatches to the paragraph handler.
+      const children = Array.isArray(node.content) ? node.content : []
+      const content = helpers.renderChildren(children)
       const emoji = node.attrs?.emoji || '💡'
       return `$callout${emoji}\n${content}\n$\n\n`
     },

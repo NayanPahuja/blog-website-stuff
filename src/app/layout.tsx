@@ -47,6 +47,7 @@ export default function RootLayout({
                   var t = p === "dark" || (p === "system" && m.matches) ? "dark" : "light";
                   document.documentElement.setAttribute("data-theme", t);
                   document.documentElement.setAttribute("data-theme-preference", p);
+                  document.documentElement.classList.toggle("dark", t === "dark");
                 } catch(e) {}
               })();
             `,

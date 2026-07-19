@@ -26,11 +26,15 @@
   --page-width: 1150px;
   --rail: clamp(0.5rem, 2vw, 2rem);
 
-  /* Bridge for edra-react's shadcn-convention CSS variables. */
+  /* Bridge for edra-react's shadcn-convention CSS variables. `primary` maps
+     to neutral text, not this app's brand --accent (blue) — edra-react uses
+     `primary` pervasively for active/selected states (toolbar buttons,
+     selected media rings, table selection, checkboxes), so pointing it at
+     the brand color turned the whole editor blue. */
   --background: var(--bg);
   --foreground: var(--text);
   --muted-foreground: var(--muted);
-  --primary: var(--accent);
+  --primary: var(--text);
   --destructive: #dc2626;
   --radius: 0.5rem;
 }
@@ -54,7 +58,7 @@
   --background: var(--bg);
   --foreground: var(--text);
   --muted-foreground: var(--muted);
-  --primary: var(--accent);
+  --primary: var(--text);
   --destructive: #f87171;
   --radius: 0.5rem;
 }
@@ -69,7 +73,14 @@
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
   --color-link: var(--link);
-  --color-accent: var(--accent);
+  /* edra-react's own components consume `bg-accent`/`text-accent-foreground`
+     as a neutral hover surface (shadcn convention), not this app's brand
+     blue — point it at the same neutral hover this app already uses for
+     menu items elsewhere, not --accent. Nothing else in the app currently
+     renders via the `accent`/`text-accent` Tailwind utilities, so this only
+     affects edra-react's chrome. */
+  --color-accent: var(--surface);
+  --color-accent-foreground: var(--text);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
   --color-ink: var(--ink);
@@ -83,9 +94,8 @@
   --color-muted-foreground: var(--muted);
   --color-popover: var(--bg-2);
   --color-popover-foreground: var(--text);
-  --color-primary: var(--accent);
-  --color-primary-foreground: #ffffff;
-  --color-accent-foreground: #ffffff;
+  --color-primary: var(--text);
+  --color-primary-foreground: var(--bg);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: #ffffff;
 
@@ -647,20 +657,4 @@ main {
     margin-top: 2rem;
     padding: 1.5rem var(--rail);
   }
-}
-
-/* ===== Code syntax highlighting (rehype-pretty-code / Shiki) =====
-   rehype-pretty-code emits both light + dark spans with data-theme
-   attributes. By default (light) only [data-theme="light"] is shown;
-   when the page is in dark mode the dark spans take over. */
-.shiki,
-.shiki span {
-  color: var(--shiki-light);
-  background-color: var(--shiki-light-bg);
-}
-
-[data-theme="dark"] .shiki,
-[data-theme="dark"] .shiki span {
-  color: var(--shiki-dark);
-  background-color: var(--shiki-dark-bg);
 }
