@@ -31,7 +31,7 @@
 	// DATABASE_URL) are set via `wrangler secret put <NAME>` and are NOT listed.
 	// See .env.example for the full list and README "Getting started".
 	"vars": {
-		"NEXT_PUBLIC_SUPABASE_URL": "",
-		"NEXT_PUBLIC_SUPABASE_ANON_KEY": ""
+		"NEXT_PUBLIC_SUPABASE_URL": "https://vrbutktnsdxgffoxnbul.supabase.co",
+		"NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZyYnV0a3Ruc2R4Z2Zmb3huYnVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzODMyMzksImV4cCI6MjA5OTk1OTIzOX0.JJkI-t2L2QXdIAfzR2XYrMHoM7HTnWRsDy3MdPsshos"
 	}
 }
